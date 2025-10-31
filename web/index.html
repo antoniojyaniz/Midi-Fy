@@ -183,7 +183,7 @@
 
   <div id="toast" class="toast" role="alert"></div>
 
-  <!-- Minimal MIDI writer -->
+  <!-- MIDI writer -->
   <script>
     function varLen(n){const b=[];let buffer=n&0x7F;while((n>>=7)){buffer<<=8;buffer|=(n&0x7F)|0x80;}for(;;){b.push(buffer&0xFF);if(buffer&0x80)buffer>>=8;else break;}return b;}
     function write16(n){return[(n>>8)&0xFF,n&0xFF];}
@@ -319,3 +319,4 @@
   </script>
 </body>
 </html>
+
