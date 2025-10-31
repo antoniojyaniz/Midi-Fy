@@ -2,8 +2,6 @@
 
 Midi-Fy is a lightweight prompt based MIDI file generator. Simply describe the kind of midi clip you would like and let Midi-Fy take care of the rest. You can visualize the notes on a piano roll, tweak your inputs, and instantly build new ideas.
 
-## Demo 
-
 ## How It’s Made
 
 The frontend is a single static page. It collects a few parameters with simple form controls, builds a clear prompt string, and sends it to the backend with fetch. The backend is a small Express server that accepts a POST /compose. It forwards the prompt to Claude, asks for strict JSON that describes a single MIDI clip, and then validates the output. Notes are clamped so nothing spills past the requested bar length. Keys and modes are parsed into pitch classes, and out-of-scale notes are either snapped into the scale or rejected based on env flags. The server returns clean JSON to the browser. 
