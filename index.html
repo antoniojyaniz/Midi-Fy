@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>midi-fy</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root{
+      --bg:#0b0d12;
+      --panel:#121621;
+      --panel-2:#0f1320;
+      --card:#151a28;
+      --muted:#a7b0c0;
+      --text:#e7ebf3;
+      --brand:#6cf0c2;
+      --brand-2:#7aa7ff;
+      --danger:#ff6b6b;
+      --ok:#6ee7a2;
+      --ring:0 0 0 3px rgba(108,240,194,.2);
+      --radius:14px;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg:#f7f8fb; --panel:#fff; --panel-2:#fff; --card:#fff;
+        --text:#111827; --muted:#5b6473; --shadow:0 12px 28px rgba(16,24,40,.08);
+      }
+      body{background-image:none;}
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      background: radial-gradient(1000px 500px at 10% -10%,rgba(122,167,255,.12),transparent),
+                  radial-gradient(800px 400px at 90% 0,rgba(108,240,194,.10),transparent),
+                  var(--bg);
+      color:var(--text);
+    }
+    .wrap{max-width:980px;margin:44px auto;padding:0 18px}
+    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px;}
+    .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit;}
+    .logo{
+      width:38px;height:38px; border-radius:10px; background:
+        radial-gradient(60% 60% at 30% 30%, #cfffe9, transparent 70%),
+        radial-gradient(65% 60% at 80% 20%, #cfe0ff, transparent 70%),
+        linear-gradient(135deg, var(--brand), var(--brand-2));
+      box-shadow: 0 6px 18px rgba(122,167,255,.25), inset 0 0 12px rgba(255,255,255,.25);
+    }
+    .title{font-weight:700; letter-spacing:.2px;}
+    .subtitle{color:var(--muted); font-size:14px; margin-top:2px}
+
+    .shell{background:linear-gradient(180deg, var(--panel), var(--panel-2)); border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid rgba(255,255,255,.06); overflow:hidden;}
+    .grid{display:grid; grid-template-columns:1.05fr 1fr; gap:0;}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr;} }
+
+    .pane{padding:20px 20px 14px; border-right:1px solid rgba(255,255,255,.06);}
+    @media (max-width:900px){ .pane{border-right:none; border-bottom:1px solid rgba(255,255,255,.06);} }
+
+    .row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px}
+    label{font-size:12px; color:var(--muted)}
+    .field{display:flex; flex-direction:column; gap:6px; min-width:160px; flex:1}
+    select, textarea, input, button {
+      border:1px solid rgba(255,255,255,.10);
+      background:var(--card); color:var(--text);
+      border-radius:10px; padding:10px 12px; font-size:15px; outline:none;
+    }
+    select:focus, textarea:focus{ box-shadow: var(--ring); border-color:rgba(108,240,194,.55); }
+    textarea{min-height:104px; resize:vertical}
+
+    .actions{display:flex; gap:12px; align-items:center; margin-top:10px}
+    .btn{
+      display:inline-flex; align-items:center; gap:8px; border-radius:12px; padding:10px 14px;
+      border:1px solid rgba(255,255,255,.10); cursor:pointer; user-select:none;
+      background:linear-gradient(180deg, rgba(108,240,194,.16), rgba(108,240,194,.08));
+      transition:transform .06s ease, box-shadow .2s ease, background .2s ease;
+      text-decoration:none; color:var(--text); font-weight:600;
+    }
+    .btn:hover{ box-shadow:0 8px 24px rgba(108,240,194,.18); }
+    .btn:active{ transform:translateY(1px); }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; box-shadow:none; }
+    .btn.primary{ background:linear-gradient(180deg, var(--brand), #4fe0af); color:#0b0d12; }
+    .btn.primary:hover{ filter:brightness(1.03) }
+
+    .status{ color:var(--muted); font-size:14px; min-height:20px }
+    .status.ok{ color:var(--ok) }
+    .status.err{ color:var(--danger) }
+
+    .viz{ padding:20px; display:flex; flex-direction:column; gap:12px; }
+    #roll{ width:100%; height:380px; background:linear-gradient(180deg, #0d1220, #0c111c);
+      border:1px solid rgba(255,255,255,.06); border-radius:12px; }
+
+    .toast{position:fixed; inset:auto 20px 20px auto; background:#0f1422; color:#cfe0ff;
+      border:1px solid rgba(122,167,255,.35); padding:10px 12px; border-radius:10px; box-shadow:var(--shadow);
+      display:none; font-size:13px;
+    }
+    .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:var(--brand);
+      border-radius:50%; animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="#">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="title">midi-fy</div>
+          <div class="subtitle">describe it → get a MIDI clip </div>
+        </div>
+      </a>
+    </header>
+
+    <section class="shell grid" aria-label="Composer">
+      <!-- Left: controls -->
+      <div class="pane">
+        <div class="row">
+          <div class="field">
+            <label for="clipType">Type</label>
+            <select id="clipType">
+              <option>chords</option>
+              <option>bass</option>
+              <option>lead</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="bars">Bars</label>
+            <select id="bars"><option>8</option><option>16</option></select>
+          </div>
+          <div class="field">
+            <label for="key">Key</label>
+            <select id="key">
+              <option value="">(auto)</option>
+              <option>C</option><option>C#</option><option>Db</option>
+              <option>D</option><option>D#</option><option>Eb</option>
+              <option>E</option><option>F</option><option>F#</option><option>Gb</option>
+              <option>G</option><option>G#</option><option>Ab</option>
+              <option>A</option><option>A#</option><option>Bb</option><option>B</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="mode">Scale</label>
+            <select id="mode">
+              <option value="">(auto)</option>
+              <option>major</option>
+              <option>minor</option>
+              <option>dorian</option>
+              <option>mixolydian</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="feel">Feel</label>
+            <select id="feel">
+              <option value="">(auto)</option>
+              <option>emotional</option><option>longing</option><option>sad</option>
+              <option>happy</option><option>energetic</option><option>serene</option><option>tense</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:4px">
+          <label for="text">Details</label>
+          <textarea id="text" placeholder="extra details (imagination is the limit)"></textarea>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="go">
+            <span class="spinner" id="spin" style="display:none"></span>
+            <span>generate</span>
+          </button>
+          <!-- Download appears here after success -->
+          <a id="download" class="btn" style="display:none;">download midi</a>
+          <span id="status" class="status" role="status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <!-- Right: visualization -->
+      <div class="viz">
+        <canvas id="roll"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="alert"></div>
+
+  <!-- Minimal MIDI writer -->
+  <script>
+    function varLen(n){const b=[];let buffer=n&0x7F;while((n>>=7)){buffer<<=8;buffer|=(n&0x7F)|0x80;}for(;;){b.push(buffer&0xFF);if(buffer&0x80)buffer>>=8;else break;}return b;}
+    function write16(n){return[(n>>8)&0xFF,n&0xFF];}
+    function write32(n){return[(n>>>24)&0xFF,(n>>>16)&0xFF,(n>>>8)&0xFF,n&0xFF];}
+    function buildMidiBlob(data){
+      const PPQ=480;
+      const program=(data.instrument&&Number.isFinite(data.instrument.program))?data.instrument.program:0;
+      const ev=[];
+      (data.notes||[]).forEach(n=>{
+        const s=Math.max(0,Math.round((n.tb||0)*PPQ));
+        const d=Math.max(1,Math.round((n.db||1)*PPQ));
+        const p=Math.max(0,Math.min(127,Math.round(n.p)));
+        const v=Math.max(1,Math.min(127,Math.round((n.v??0.8)*127)));
+        ev.push({tick:s,type:'on',note:p,vel:v});
+        ev.push({tick:s+d,type:'off',note:p,vel:64});
+      });
+      ev.sort((a,b)=>(a.tick-b.tick)||((a.type==='off')?-1:1));
+      const bytes=[0x4D,0x54,0x68,0x64,...write32(6),...write16(0),...write16(1),...write16(PPQ)];
+      const lengthIndex=bytes.length+4;
+      bytes.push(0x4D,0x54,0x72,0x6B,0,0,0,0);
+      const track=[];
+      const ts=(data.time_signature||'4/4').startsWith('3/')?[3,2,24,8]:[4,2,24,8];
+      track.push(0x00,0xFF,0x58,0x04,ts[0],ts[1],ts[2],ts[3]);
+      track.push(0x00,0xC0,program&0x7F);
+      let last=0;
+      for(const e of ev){const d=e.tick-last;last=e.tick;track.push(...varLen(d));if(e.type==='on')track.push(0x90,e.note&0x7F,e.vel&0x7F);else track.push(0x80,e.note&0x7F,e.vel&0x7F);}
+      track.push(0x00,0xFF,0x2F,0x00);
+      const len=write32(track.length);
+      bytes.splice(lengthIndex,4,...len);
+      bytes.push(...track);
+      return new Blob([new Uint8Array(bytes)],{type:'audio/midi'});
+    }
+  </script>
+
+  <script>
+    const API='http://localhost:3000';
+    const el = id => document.getElementById(id);
+    const setBusy = (b) => { el('spin').style.display = b ? 'inline-block' : 'none'; el('go').disabled = b; };
+    const toast = (t) => { const n = el('toast'); n.textContent = t; n.style.display = 'block'; clearTimeout(n._t); n._t = setTimeout(()=> n.style.display='none', 3200); };
+
+    el('go').onclick = async () => {
+      setBusy(true);
+      el('status').className = 'status';
+      el('status').textContent = 'generating…';
+      el('download').style.display = 'none';
+      drawPianoRoll({notes:[], length_bars:8, time_signature:'4/4'});
+
+      const payload = {
+        clipType: el('clipType').value,
+        bars: el('bars').value,
+        key: el('key').value,
+        mode: el('mode').value,
+        feel: el('feel').value,
+        text: el('text').value.trim()
+      };
+
+      try {
+        const r = await fetch(`${API}/compose`,{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if(!r.ok){
+          const msg = await r.text();
+          throw new Error(`HTTP ${r.status} — ${msg}`);
+        }
+        const data = await r.json();
+        if(data.error) throw new Error(data.detail || data.error);
+
+        drawPianoRoll(data);
+
+        if(Array.isArray(data.notes) && data.notes.length > 0){
+          const blob = buildMidiBlob(data);
+          const url = URL.createObjectURL(blob);
+          const key = (data.key || '').replace(/[^A-Gb#]/gi,'') || 'auto';
+          const mode = (data.mode || 'scale');
+          const base = `${data.clip_type || 'clip'}_${key}-${mode}_${data.length_bars || 8}bars`;
+
+          const a = el('download');
+          a.href = url;
+          a.download = `${base}.mid`;
+          a.textContent = 'download MIDI';
+          a.style.display = 'inline-flex';
+
+          el('status').textContent = data._snapped_info?.snapped_count
+            ? `Done. Snapped ${data._snapped_info.snapped_count} notes to ${data.key} ${data.mode}.`
+            : '';
+          el('status').classList.add('ok');
+          toast('MIDI ready — click Download');
+        } else {
+          el('status').textContent = 'No notes returned.';
+        }
+      } catch (err) {
+        console.error(err);
+        el('status').textContent = 'Error: ' + err.message;
+        el('status').classList.add('err');
+        toast('Generation failed — check the status line.');
+      } finally {
+        setBusy(false);
+      }
+    };
+
+    function drawPianoRoll(data){
+      const c = el('roll'), ctx = c.getContext('2d'),
+            cssW = c.clientWidth || 900, cssH = c.clientHeight || 380,
+            dpr = window.devicePixelRatio || 1;
+      c.width = Math.round(cssW*dpr); c.height = Math.round(cssH*dpr); ctx.scale(dpr,dpr);
+      const w=cssW,h=cssH, beatsPerBar = data.time_signature?.startsWith('3/')?3:4,
+            total = (data.length_bars||8)*beatsPerBar, notes = data.notes||[];
+
+      const min = notes.length?Math.min(...notes.map(n=>n.p)):48;
+      const max = notes.length?Math.max(...notes.map(n=>n.p)):72;
+      const lo = Math.max(0, min-2), hi = Math.min(127, max+2), span = Math.max(1, hi-lo+1);
+
+      // bg
+      const grad = ctx.createLinearGradient(0,0,0,h);
+      grad.addColorStop(0,'#0c1220'); grad.addColorStop(1,'#0a0f1a');
+      ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+
+      // grid
+      ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 1;
+      for(let b=0;b<=total;b++){ const x=(b/total)*w; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(255,255,255,.12)';
+      for(let bar=0;bar<=total;bar+=beatsPerBar){ const x=(bar/total)*w; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+
+      // notes
+      notes.forEach(n=>{
+        const x=(n.tb/total)*w, W=(n.db/total)*w;
+        const y=h-((n.p-lo+1)/span)*h, H=Math.max(3, h/span);
+        ctx.fillStyle='rgba(122,167,255,.18)'; ctx.fillRect(x,y,Math.max(1,W),H);
+        ctx.fillStyle='#7aa7ff'; ctx.fillRect(x+0.5,y+0.5,Math.max(1,W-1),Math.max(2,H-1));
+      });
+    }
+  </script>
+</body>
+</html>
